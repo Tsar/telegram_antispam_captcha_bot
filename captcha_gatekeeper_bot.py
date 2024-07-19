@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.8
 
 from telebot import TeleBot
 from pyTelegramBotCAPTCHA import CaptchaManager, CaptchaOptions
