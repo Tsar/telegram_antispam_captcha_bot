@@ -26,7 +26,7 @@ captcha_manager = CaptchaManager(
 
 
 ts = lambda: datetime.now().strftime('[%Y-%m-%d %H:%M:%S.%f]')
-log = lambda text: log(f'{ts()} {text}', flush=True)
+log = lambda text: print(f'{ts()} {text}', flush=True)
 
 
 def is_enabled_for_group(chat_id: int) -> bool:
