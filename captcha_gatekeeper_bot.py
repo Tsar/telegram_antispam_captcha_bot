@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.8
 
+from datetime import datetime
 from telebot import TeleBot
 from pyTelegramBotCAPTCHA import CaptchaManager, CaptchaOptions
 from datetime import datetime, timedelta
@@ -23,6 +24,11 @@ captcha_manager = CaptchaManager(
     ),
 )
 
+
+ts = lambda: datetime.now().strftime('[%Y-%m-%d %H:%M:%S.%f]')
+log = lambda text: log(f'{ts()} {text}', flush=True)
+
+
 def is_enabled_for_group(chat_id: int) -> bool:
     return True  # TODO: restrict by chat ids
 
@@ -34,7 +40,7 @@ def new_member(message):
     for user in message.new_chat_members:
         captcha_manager.restrict_chat_member(bot, message.chat.id, user.id)
         captcha_manager.send_new_captcha(bot, message.chat, user)
-        print(f'New user detected: chat_id={message.chat.id}, user_id: {user.id}')
+        log(f'New user detected: chat_id={message.chat.id}, user_id: {user.id}')
 
 
 @bot.callback_query_handler(func=lambda callback: True)
@@ -50,7 +56,7 @@ def on_correct(captcha):
         return
     captcha_manager.unrestrict_chat_member(bot, captcha.chat.id, captcha.user.id)
     captcha_manager.delete_captcha(bot, captcha)
-    print(f'User solved captcha: chat_id={captcha.chat.id}, user_id: {captcha.user.id}')
+    log(f'User solved captcha: chat_id={captcha.chat.id}, user_id: {captcha.user.id}')
 
 
 @captcha_manager.on_captcha_not_correct
@@ -66,7 +72,7 @@ def on_not_correct(captcha):
             until_date=(datetime.now() + timedelta(hours=1)),
         )
         captcha_manager.delete_captcha(bot, captcha)
-        print(f'User failed ALL attempts to solve captcha and was kicked: previous_tries={captcha.previous_tries}, chat_id={captcha.chat.id}, user_id: {captcha.user.id}')
+        log(f'User failed ALL attempts to solve captcha and was kicked: previous_tries={captcha.previous_tries}, chat_id={captcha.chat.id}, user_id: {captcha.user.id}')
 
 
 @captcha_manager.on_captcha_timeout
@@ -79,8 +85,9 @@ def on_timeout(captcha):
         until_date=(datetime.now() + timedelta(hours=1)),
     )
     captcha_manager.delete_captcha(bot, captcha)
-    print(f'User failed to solve captcha in time and was kicked: chat_id={captcha.chat.id}, user_id: {captcha.user.id}')
+    log(f'User failed to solve captcha in time and was kicked: chat_id={captcha.chat.id}, user_id: {captcha.user.id}')
 
 
 if __name__ == '__main__':
+    log(f'Bot started')
     bot.polling()
