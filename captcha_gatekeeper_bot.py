@@ -6,9 +6,9 @@ from telebot import TeleBot
 from pyTelegramBotCAPTCHA import CaptchaManager, CaptchaOptions
 
 from pyTelegramBotCAPTCHA.telebot_captcha import languages
-languages['en']['text'] = 'Tervetuloa, #USER!\n\nWhich five numbers do you see?\nMitkä viisi numeroa näet kuvassa?\n\n🔁: generate new captcha\n⬅️: erase\n✅: submit answer'
+languages['en']['text'] = 'Tervetuloa, #USER!\n\nWhich five numbers do you see?\nMitkä viisi numeroa näet kuvassa?\n\n🔁: generate new captcha\n⬅️: erase\n✅: submit answer\n'
 
-MAX_ATTEMPTS = 5
+MAX_ATTEMPTS = 3
 with open('bot_token.txt', 'r') as botTokenFile:
     BOT_TOKEN = botTokenFile.read().strip()
 
@@ -17,9 +17,9 @@ captcha_manager = CaptchaManager(
     bot_id=bot.get_me().id,
     default_options=CaptchaOptions(
         generator="default",
-        timeout=300,                # 5 minutes to solve captcha
+        timeout=180,                # 5 minutes to solve captcha
         code_length=5,              # captcha length
-        max_user_reloads=5,         # how many times user can reload captcha manually
+        max_user_reloads=3,         # how many times user can reload captcha manually
         max_attempts=MAX_ATTEMPTS,  # how many attempts user can perform
         only_digits=True,
     ),
