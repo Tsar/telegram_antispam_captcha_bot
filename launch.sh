@@ -1,3 +1,3 @@
 #!/bin/bash -e
 
-./captcha_gatekeeper_bot.py | tee -a captcha_bot_logs.txt
+python3.8 captcha_gatekeeper_bot.py 2>&1 | tee -a captcha_bot_logs.txt

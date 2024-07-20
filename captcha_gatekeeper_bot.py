@@ -1,12 +1,12 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3
 
+import time
 from datetime import datetime
 from telebot import TeleBot
 from pyTelegramBotCAPTCHA import CaptchaManager, CaptchaOptions
-from datetime import datetime, timedelta
 
 from pyTelegramBotCAPTCHA.telebot_captcha import languages
-languages['en']['text'] = 'Welcome, #USER!\nPlease enter the code to verify that you are not a bot. You have 3 minutes.'
+languages['en']['text'] = 'Tervetuloa, #USER!\n\nWhich five numbers do you see?\nMitkä viisi numeroa näet kuvassa?\n\n🔁: generate new captcha\n⬅️: erase\n✅: submit answer'
 
 MAX_ATTEMPTS = 5
 with open('bot_token.txt', 'r') as botTokenFile:
@@ -17,9 +17,10 @@ captcha_manager = CaptchaManager(
     bot_id=bot.get_me().id,
     default_options=CaptchaOptions(
         generator="default",
-        timeout=180,
-        code_length=5,
-        max_attempts=MAX_ATTEMPTS,
+        timeout=300,                # 5 minutes to solve captcha
+        code_length=5,              # captcha length
+        max_user_reloads=5,         # how many times user can reload captcha manually
+        max_attempts=MAX_ATTEMPTS,  # how many attempts user can perform
         only_digits=True,
     ),
 )
@@ -59,6 +60,10 @@ def on_correct(captcha):
     log(f'User solved captcha: chat_id={captcha.chat.id}, user_id: {captcha.user.id}')
 
 
+def kick_user_without_ban(chat_id, user_id):
+    bot.unban_chat_member(chat_id, user_id, only_if_banned=False)
+
+
 @captcha_manager.on_captcha_not_correct
 def on_not_correct(captcha):
     if not is_enabled_for_group(captcha.chat.id):
@@ -66,11 +71,7 @@ def on_not_correct(captcha):
     if captcha.previous_tries < MAX_ATTEMPTS:
         captcha_manager.refresh_captcha(bot, captcha)
     else:
-        bot.kick_chat_member(
-            captcha.chat.id,
-            captcha.user.id,
-            until_date=(datetime.now() + timedelta(hours=1)),
-        )
+        kick_user_without_ban(captcha.chat.id, captcha.user.id)
         captcha_manager.delete_captcha(bot, captcha)
         log(f'User failed ALL attempts to solve captcha and was kicked: previous_tries={captcha.previous_tries}, chat_id={captcha.chat.id}, user_id: {captcha.user.id}')
 
@@ -79,15 +80,24 @@ def on_not_correct(captcha):
 def on_timeout(captcha):
     if not is_enabled_for_group(captcha.chat.id):
         return
-    bot.kick_chat_member(
-        captcha.chat.id,
-        captcha.user.id,
-        until_date=(datetime.now() + timedelta(hours=1)),
-    )
+    kick_user_without_ban(captcha.chat.id, captcha.user.id)
     captcha_manager.delete_captcha(bot, captcha)
     log(f'User failed to solve captcha in time and was kicked: chat_id={captcha.chat.id}, user_id: {captcha.user.id}')
 
 
+def run_bot():
+    while True:
+        try:
+            log(f'Bot starts polling')
+            bot.polling(non_stop=True)
+        except KeyboardInterrupt:
+            log(f'Stopping on keyboard interrupt')
+            bot.stop_polling()
+            break
+        except Exception as e:
+            log(f'Bot polling failed: {e}, restarting in 1 second')
+            time.sleep(1)
+
 if __name__ == '__main__':
-    log(f'Bot started')
-    bot.polling()
+    run_bot()
+    log(f'Bot has stopped')
