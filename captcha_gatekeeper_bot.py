@@ -6,7 +6,7 @@ from telebot import TeleBot
 from pyTelegramBotCAPTCHA import CaptchaManager, CaptchaOptions
 
 from pyTelegramBotCAPTCHA.telebot_captcha import languages
-languages['en']['text'] = 'Tervetuloa, #USER!\n\nWhich five numbers do you see?\nMitkä viisi numeroa näet kuvassa?\n\n🔁: generate new captcha\n⬅️: erase\n✅: submit answer\n'
+languages['en']['text'] = 'Tervetuloa, #USER!\n\nWe want to check that you are not a bot. Which five numbers do you see?\n\nHaluamme tarkistaa, että et ole botti. Mitkä viisi numeroa näet kuvassa?\n\n🔁: generate new captcha\n⬅️: erase\n✅: submit answer\n'
 
 MAX_ATTEMPTS = 3
 with open('bot_token.txt', 'r') as botTokenFile:
