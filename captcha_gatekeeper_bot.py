@@ -12,6 +12,11 @@ MAX_ATTEMPTS = 3
 with open('bot_token.txt', 'r') as botTokenFile:
     BOT_TOKEN = botTokenFile.read().strip()
 
+ENABLED_FOR_GROUPS = {
+    -1001173196100,
+    -1002224830426,
+}
+
 bot = TeleBot(BOT_TOKEN)
 captcha_manager = CaptchaManager(
     bot_id=bot.get_me().id,
@@ -25,13 +30,14 @@ captcha_manager = CaptchaManager(
     ),
 )
 
+joined_the_group_service_message_ids = {}  # (chat_id, user_id) -> message_id
 
 ts = lambda: datetime.now().strftime('[%Y-%m-%d %H:%M:%S.%f]')
 log = lambda text: print(f'{ts()} {text}', flush=True)
 
 
 def is_enabled_for_group(chat_id: int) -> bool:
-    return True  # TODO: restrict by chat ids
+    return chat_id in ENABLED_FOR_GROUPS
 
 
 @bot.message_handler(content_types=["new_chat_members"])
@@ -41,7 +47,8 @@ def new_member(message):
     for user in message.new_chat_members:
         captcha_manager.restrict_chat_member(bot, message.chat.id, user.id)
         captcha_manager.send_new_captcha(bot, message.chat, user)
-        log(f'New user detected: chat_id={message.chat.id}, user_id: {user.id}')
+        joined_the_group_service_message_ids[(message.chat.id, user.id)] = message.message_id
+        log(f'New user detected: chat_id: {message.chat.id}, user_id: {user.id}, message_id: {message.message_id}')
 
 
 @bot.callback_query_handler(func=lambda callback: True)
@@ -57,11 +64,18 @@ def on_correct(captcha):
         return
     captcha_manager.unrestrict_chat_member(bot, captcha.chat.id, captcha.user.id)
     captcha_manager.delete_captcha(bot, captcha)
-    log(f'User solved captcha: chat_id={captcha.chat.id}, user_id: {captcha.user.id}')
+    joined_the_group_service_message_ids.pop((captcha.chat.id, captcha.user.id), None)
+    log(f'User solved captcha: chat_id: {captcha.chat.id}, user_id: {captcha.user.id}')
 
 
 def kick_user_without_ban(chat_id, user_id):
     bot.unban_chat_member(chat_id, user_id, only_if_banned=False)
+
+
+def delete_joined_the_group_service_message(chat_id, user_id):
+    message_id = joined_the_group_service_message_ids.pop((chat_id, user_id), None)
+    if message_id is None or not bot.delete_message(chat_id=chat_id, message_id=message_id):
+        log(f'Failed to deleted "X joined the group" service message, chat_id: {chat_id}, user_id: {user_id}, message_id: {message_id}')
 
 
 @captcha_manager.on_captcha_not_correct
@@ -73,7 +87,8 @@ def on_not_correct(captcha):
     else:
         kick_user_without_ban(captcha.chat.id, captcha.user.id)
         captcha_manager.delete_captcha(bot, captcha)
-        log(f'User failed ALL attempts to solve captcha and was kicked: previous_tries={captcha.previous_tries}, chat_id={captcha.chat.id}, user_id: {captcha.user.id}')
+        delete_joined_the_group_service_message(captcha.chat.id, captcha.user.id)
+        log(f'User failed ALL attempts to solve captcha and was kicked: previous_tries: {captcha.previous_tries}, chat_id: {captcha.chat.id}, user_id: {captcha.user.id}')
 
 
 @captcha_manager.on_captcha_timeout
@@ -82,7 +97,8 @@ def on_timeout(captcha):
         return
     kick_user_without_ban(captcha.chat.id, captcha.user.id)
     captcha_manager.delete_captcha(bot, captcha)
-    log(f'User failed to solve captcha in time and was kicked: chat_id={captcha.chat.id}, user_id: {captcha.user.id}')
+    delete_joined_the_group_service_message(captcha.chat.id, captcha.user.id)
+    log(f'User failed to solve captcha in time and was kicked: chat_id: {captcha.chat.id}, user_id: {captcha.user.id}')
 
 
 def run_bot():
