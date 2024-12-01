@@ -3,6 +3,7 @@
 import time
 from datetime import datetime
 from telebot import TeleBot
+from telebot.apihelper import ApiTelegramException
 from telebot.types import ChatMemberBanned
 from pyTelegramBotCAPTCHA import CaptchaManager, CaptchaOptions
 
@@ -78,8 +79,15 @@ def kick_user_without_ban(chat_id, user_id):
 
 def delete_joined_the_group_service_message(chat_id, user_id):
     message_id = joined_the_group_service_message_ids.pop((chat_id, user_id), None)
-    if message_id is None or not bot.delete_message(chat_id=chat_id, message_id=message_id):
-        log(f'Failed to deleted "X joined the group" service message, chat_id: {chat_id}, user_id: {user_id}, message_id: {message_id}')
+    failure_message_prefix = f'Failed to deleted "X joined the group" service message, chat_id: {chat_id}, user_id: {user_id}, message_id: {message_id}, reason: '
+    if message_id is None:
+        log(failure_message_prefix + 'NO_MESSAGE_ID')
+        return
+    try:
+        if not bot.delete_message(chat_id=chat_id, message_id=message_id):
+            log(failure_message_prefix + 'DELETE_FAILED')
+    except ApiTelegramException as e:
+        log(failure_message_prefix + f'EXCEPTION: {e}')
 
 
 @captcha_manager.on_captcha_not_correct
