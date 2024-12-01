@@ -3,6 +3,7 @@
 import time
 from datetime import datetime
 from telebot import TeleBot
+from telebot.types import ChatMemberBanned
 from pyTelegramBotCAPTCHA import CaptchaManager, CaptchaOptions
 
 from pyTelegramBotCAPTCHA.telebot_captcha import languages
@@ -22,7 +23,7 @@ captcha_manager = CaptchaManager(
     bot_id=bot.get_me().id,
     default_options=CaptchaOptions(
         generator="default",
-        timeout=180,                # 5 minutes to solve captcha
+        timeout=180,                # 3 minutes to solve captcha
         code_length=5,              # captcha length
         max_user_reloads=3,         # how many times user can reload captcha manually
         max_attempts=MAX_ATTEMPTS,  # how many attempts user can perform
@@ -69,6 +70,9 @@ def on_correct(captcha):
 
 
 def kick_user_without_ban(chat_id, user_id):
+    if isinstance(bot.get_chat_member(chat_id, user_id), ChatMemberBanned):
+        log(f'Not kicking already banned user (otherwise user will be unbanned), chat_id: {chat_id}, user_id: {user_id}')
+        return
     bot.unban_chat_member(chat_id, user_id, only_if_banned=False)
 
 
